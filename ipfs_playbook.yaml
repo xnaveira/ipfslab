@@ -1,0 +1,30 @@
+# -*- mode: ansible -*-
+# vi: set ft=ansible :
+- name: Setup ipfs
+  hosts: all
+  become: yes
+  gather_facts: no
+  vars:
+    - paths: PATH=$PATH:/usr/local/go/bin:/home/vagrant/go/bin GOPATH=/home/vagrant/go
+    - ipfs_download: https://dist.ipfs.io/go-ipfs/v0.4.3/go-ipfs_v0.4.3_linux-amd64.tar.gz #get it from https://ipfs.io/docs/install/
+  tasks:
+    - raw: apt-get update -qq && apt-get install -qq python2.7
+    - raw: ln -s /usr/bin/python2.7 /usr/bin/python
+      ignore_errors: yes
+    - apt: name="{{ item }}" state=present
+      with_items:
+        - vim
+    - get_url: url="{{ ipfs_download }}" dest=/home/ubuntu/go-ipfs.tar.gz
+    - unarchive: src=/home/ubuntu/go-ipfs.tar.gz dest=/home/ubuntu creates=/home/ubuntu/go-ipfs copy=false
+    - shell: mv /home/ubuntu/go-ipfs/ipfs /usr/local/bin/ipfs
+      ignore_errors: yes #in case you run it more than once
+    - shell: ipfs init
+      become_user: ubuntu
+      ignore_errors: yes #in case you run it more than once
+    - shell: ipfs config Addresses.{{ item.name }} /ip4/$(ip -o -4 a s dev enp0s3 | awk '{print $4}' | sed 's/\(.*\)\/.*$/\1/')/tcp/{{ item.port }} #gives you access from the host
+      become_user: ubuntu
+      with_items:
+        - { name: API, port: 5001 }
+        - { name: Gateway, port: 8080 }
+    - file: path=/home/ubuntu/.config/systemd/user state=directory
+    - copy: src=ipfs.service dest=/home/ubuntu/.config/systemd/user/ipfs.service
