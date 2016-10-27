@@ -1,4 +1,4 @@
-# Vagrant ipfslab
+# ipfslab
 
 This is a ansible provisioned Vagrant machine that allows you to play with [IPFS](https://ipfs.io/)
 
